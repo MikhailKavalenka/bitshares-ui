@@ -33,9 +33,11 @@ div.registration {
 
         span.inline-label {
             max-width: 30rem;
+
             &.generated-password-field {
                 margin-bottom: 1.5rem;
             }
+
             .button {
                 border-radius: 0;
             }

@@ -12,6 +12,7 @@ import AccessSettings from "../Settings/AccessSettings";
 import Icon from "../Icon/Icon";
 import "intro.js/introjs.css";
 import guide from "intro.js";
+import ReportModal from "../Modal/ReportModal";
 import PropTypes from "prop-types";
 import {routerTransitioner} from "../../routerTransition";
 import LoadingIndicator from "../LoadingIndicator";
@@ -38,6 +39,7 @@ class Footer extends React.Component {
         this.state = {
             choiceModalShowOnce: false,
             isChoiceModalVisible: false,
+            isReportModalVisible: false,
             showNodesPopup: false,
             showConnectingPopup: false
         };
@@ -50,6 +52,8 @@ class Footer extends React.Component {
         this.getNode = this.getNode.bind(this);
         this.showChoiceModal = this.showChoiceModal.bind(this);
         this.hideChoiceModal = this.hideChoiceModal.bind(this);
+        this.showReportModal = this.showReportModal.bind(this);
+        this.hideReportModal = this.hideReportModal.bind(this);
     }
 
     showChoiceModal() {
@@ -61,6 +65,18 @@ class Footer extends React.Component {
     hideChoiceModal() {
         this.setState({
             isChoiceModalVisible: false
+        });
+    }
+
+    showReportModal() {
+        this.setState({
+            isReportModalVisible: true
+        });
+    }
+
+    hideReportModal() {
+        this.setState({
+            isReportModalVisible: false
         });
     }
 
@@ -79,6 +95,8 @@ class Footer extends React.Component {
         return (
             nextState.isChoiceModalVisible !==
                 this.state.isChoiceModalVisible ||
+            nextState.isReportModalVisible !==
+                this.state.isReportModalVisible ||
             nextProps.dynGlobalObject !== this.props.dynGlobalObject ||
             nextProps.backup_recommended !== this.props.backup_recommended ||
             nextProps.rpc_connection_status !==
@@ -149,8 +167,9 @@ class Footer extends React.Component {
 
     getNodeIndexByURL(url) {
         let nodes = this.props.defaults.apiServer;
-
-        let index = nodes.findIndex(node => node.url === url);
+        let index = nodes.findIndex(
+            node => !!node && !!node.url && node.url === url
+        );
         if (index === -1) {
             return null;
         }
@@ -165,6 +184,10 @@ class Footer extends React.Component {
     }
 
     getNode(node = {url: "", operator: ""}) {
+        if (!node || !node.url) {
+            throw "Node is undefined of has no url";
+        }
+
         const {props} = this;
 
         let title = node.operator + " " + !!node.location ? node.location : "";
@@ -175,7 +198,10 @@ class Footer extends React.Component {
         return {
             name: title,
             url: node.url,
-            ping: props.apiLatencies[node.url]
+            ping:
+                node.url in props.apiLatencies
+                    ? props.apiLatencies[node.url]
+                    : -1
         };
     }
 
@@ -590,7 +616,16 @@ class Footer extends React.Component {
                                         </span>
                                     </div>
                                 </div>
+
                                 <div className="grid-block">
+                                    <div
+                                        className="introjs-launcher"
+                                        onClick={e => {
+                                            this.showReportModal(e);
+                                        }}
+                                    >
+                                        <Translate content="modal.report.button" />
+                                    </div>
                                     <div
                                         className="introjs-launcher"
                                         onClick={() => {
@@ -633,6 +668,14 @@ class Footer extends React.Component {
                 >
                     <Translate content="global.help" />
                 </div>
+                <ReportModal
+                    showModal={this.showReportModal}
+                    hideModal={this.hideReportModal}
+                    visible={this.state.isReportModalVisible}
+                    refCallback={e => {
+                        if (e) this.reportModal = e;
+                    }}
+                />
             </div>
         );
     }

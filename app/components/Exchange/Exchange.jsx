@@ -34,7 +34,10 @@ import TranslateWithLinks from "../Utility/TranslateWithLinks";
 import SimpleDepositWithdraw from "../Dashboard/SimpleDepositWithdraw";
 import SimpleDepositBlocktradesBridge from "../Dashboard/SimpleDepositBlocktradesBridge";
 import {Notification} from "bitshares-ui-style-guide";
+import PriceAlert from "./PriceAlert";
 import counterpart from "counterpart";
+import {updateGatewayBackers} from "common/gatewayUtils";
+
 class Exchange extends React.Component {
     static propTypes = {
         marketCallOrders: PropTypes.object.isRequired,
@@ -103,7 +106,61 @@ class Exchange extends React.Component {
         this.showBorrowBaseModal = this.showBorrowBaseModal.bind(this);
         this.hideBorrowBaseModal = this.hideBorrowBaseModal.bind(this);
 
+        this.showPriceAlertModal = this.showPriceAlertModal.bind(this);
+        this.hidePriceAlertModal = this.hidePriceAlertModal.bind(this);
+
+        this.handlePriceAlertSave = this.handlePriceAlertSave.bind(this);
+
         this.psInit = true;
+    }
+
+    handlePriceAlertSave(savedRules = []) {
+        // add info about market asset pair
+        savedRules = savedRules.map(rule => ({
+            type: rule.type,
+            price: rule.price,
+            baseAssetSymbol: this.props.baseAsset.get("symbol"),
+            quoteAssetSymbol: this.props.quoteAsset.get("symbol")
+        }));
+
+        // drop old rules for current market pair
+        let rules = this.props.priceAlert.filter(rule => {
+            return (
+                rule &&
+                this.props.baseAsset &&
+                this.props.quoteAsset &&
+                (rule.get("baseAssetSymbol") !==
+                    this.props.baseAsset.get("symbol") ||
+                    rule.get("quoteAssetSymbol") !==
+                        this.props.quoteAsset.get("symbol"))
+            );
+        });
+
+        // pushing new rules
+        rules = [...rules, ...savedRules];
+
+        // saving rules
+        SettingsActions.setPriceAlert(rules);
+
+        this.hidePriceAlertModal();
+    }
+
+    getPriceAlertRules() {
+        //getting rules based on market pairs
+
+        let rules = this.props.priceAlert.filter(rule => {
+            return (
+                rule &&
+                this.props.baseAsset &&
+                this.props.quoteAsset &&
+                rule.get("baseAssetSymbol") ===
+                    this.props.baseAsset.get("symbol") &&
+                rule.get("quoteAssetSymbol") ===
+                    this.props.quoteAsset.get("symbol")
+            );
+        });
+
+        return rules.toJS();
     }
 
     _handleExpirationChange(type, e) {
@@ -248,6 +305,7 @@ class Exchange extends React.Component {
             isConfirmBuyOrderModalVisible: false,
             isConfirmBuyOrderModalLoaded: false,
             isConfirmSellOrderModalVisible: false,
+            isPriceAlertModalVisible: false,
             isConfirmSellOrderModalLoaded: false,
             tabVerticalPanel: ws.get("tabVerticalPanel", "my-market"),
             tabBuySell: ws.get("tabBuySell", "buy"),
@@ -319,6 +377,18 @@ class Exchange extends React.Component {
     hidePersonalizeModal() {
         this.setState({
             isPersonalizeModalVisible: false
+        });
+    }
+
+    showPriceAlertModal() {
+        this.setState({
+            isPriceAlertModalVisible: true
+        });
+    }
+
+    hidePriceAlertModal() {
+        this.setState({
+            isPriceAlertModalVisible: false
         });
     }
 
@@ -410,7 +480,7 @@ class Exchange extends React.Component {
             capture: false,
             passive: true
         });
-
+        // updateGatewayBackers();
         this._checkFeeStatus();
     }
 
@@ -1413,19 +1483,17 @@ class Exchange extends React.Component {
         this.showBorrowBaseModal();
     }
 
-    _onDeposit(type, e) {
-        e.preventDefault();
+    _onDeposit(type) {
         this.setState({
-            modalType: type
+            depositModalType: type
         });
 
         this.showDepositModal();
     }
 
-    _onBuy(type, e) {
-        e.preventDefault();
+    _onBuy(type) {
         this.setState({
-            modalType: type
+            buyModalType: type
         });
 
         this.showDepositBridgeModal();
@@ -1765,7 +1833,8 @@ class Exchange extends React.Component {
             tabVerticalPanel,
             hidePanel,
             hideScrollbars,
-            modalType,
+            buyModalType,
+            depositModalType,
             autoScroll,
             activePanels,
             panelWidth,
@@ -1899,7 +1968,6 @@ class Exchange extends React.Component {
         /***
          * Generate layout cards
          */
-
         let actionCardIndex = 0;
 
         let buyForm = isFrozen ? null : tinyScreen &&
@@ -2196,8 +2264,11 @@ class Exchange extends React.Component {
                         }`
                     )}
                     innerClass={cnames(
-                        centerContainerWidth > 800 ? "medium-6" : "medium-12",
-                        "large-6 xlarge-6",
+                        centerContainerWidth > 1200
+                            ? "medium-6"
+                            : centerContainerWidth > 800
+                                ? "medium-6 large-6"
+                                : "",
                         "small-12 middle-content",
                         !tinyScreen ? "exchange-padded" : ""
                     )}
@@ -2279,7 +2350,10 @@ class Exchange extends React.Component {
                                     ? "medium-6"
                                     : ""
                             : "medium-12",
-                        "no-padding no-overflow middle-content small-12 order-5"
+                        "no-padding no-overflow middle-content small-12",
+                        verticalOrderBook || verticalOrderForm
+                            ? "order-4"
+                            : "order-3"
                     )}
                     innerClass={!tinyScreen ? "exchange-padded" : ""}
                     innerStyle={{paddingBottom: !tinyScreen ? "1.2rem" : "0"}}
@@ -2337,8 +2411,9 @@ class Exchange extends React.Component {
             );
 
         let settlementOrders =
-            tinyScreen &&
-            !this.state.mobileKey.includes("settlementOrders") ? null : (
+            marketSettleOrders.size === 0 ||
+            (tinyScreen &&
+                !this.state.mobileKey.includes("settlementOrders")) ? null : (
                 <MyOpenOrders
                     key={`actionCard_${actionCardIndex++}`}
                     style={{marginBottom: !tinyScreen ? 15 : 0}}
@@ -2530,7 +2605,7 @@ class Exchange extends React.Component {
                     groupStandalone.push(myOpenOrders);
                 }
 
-                if (a == "open_settlement") {
+                if (a == "open_settlement" && settlementOrders !== null) {
                     groupStandalone.push(settlementOrders);
                 }
             } else {
@@ -2567,7 +2642,7 @@ class Exchange extends React.Component {
                     );
                 }
 
-                if (a == "open_settlement") {
+                if (a == "open_settlement" && settlementOrders !== null) {
                     groupTabs[panelTabs[a]].push(
                         <Tabs.TabPane
                             tab={translator.translate("exchange.settle_orders")}
@@ -2605,7 +2680,6 @@ class Exchange extends React.Component {
                 <div
                     key={`actionCard_${actionCardIndex++}`}
                     className={cnames(
-                        verticalOrderBook ? "xlarge-order-2" : "xlarge-order-2",
                         centerContainerWidth > 1200
                             ? groupTabsCount == 1
                                 ? "medium-12 xlarge-4"
@@ -2615,7 +2689,11 @@ class Exchange extends React.Component {
                                     ? "medium-12"
                                     : "medium-6"
                                 : "",
-                        "small-12 order-5"
+                        "small-12 order-5",
+                        verticalOrderBook ? "xlarge-order-5" : "",
+                        !verticalOrderBook && !verticalOrderForm
+                            ? "xlarge-order-2"
+                            : ""
                     )}
                     style={{paddingRight: 5}}
                 >
@@ -2655,24 +2733,20 @@ class Exchange extends React.Component {
                 </div>
             ) : null;
 
-        let emptyDiv = (
-            <div
-                className={cnames(
-                    centerContainerWidth > 1200
-                        ? "xlarge-8"
-                        : centerContainerWidth > 800
-                            ? ""
+        let emptyDiv =
+            groupTabsCount > 2 ? null : (
+                <div
+                    className={cnames(
+                        centerContainerWidth > 1200 &&
+                        (verticalOrderBook || verticalOrderBook)
+                            ? "xlarge-order-6 xlarge-8 order-9"
                             : "",
-                    "medium-12 large-12",
-                    "small-12 grid-block orderbook no-padding align-spaced no-overflow wrap",
-                    `order-${buySellTop ? 3 : 1} xlarge-order-${
-                        buySellTop ? 4 : 1
-                    }`
-                )}
-            >
-                &nbsp;
-            </div>
-        );
+                        "small-12 grid-block orderbook no-padding align-spaced no-overflow wrap"
+                    )}
+                >
+                    &nbsp;
+                </div>
+            );
 
         /**
          * Generate layout grid based on Screen Size
@@ -2683,11 +2757,15 @@ class Exchange extends React.Component {
                 actionCards.push(buyForm);
                 actionCards.push(sellForm);
             }
+
             if (!verticalOrderBook) {
                 actionCards.push(orderBook);
-            } else {
+            }
+
+            if (verticalOrderBook || verticalOrderForm) {
                 actionCards.push(emptyDiv);
             }
+
             actionCards.push(groupStandalone);
             actionCards.push(groupTabbed1);
             actionCards.push(groupTabbed2);
@@ -2754,12 +2832,16 @@ class Exchange extends React.Component {
                     >
                         {marketHistory}
                     </Collapse.Panel>
-                    <Collapse.Panel
-                        header={translator.translate("exchange.settle_orders")}
-                        key="settlementOrders"
-                    >
-                        {settlementOrders}
-                    </Collapse.Panel>
+                    {settlementOrders !== null ? (
+                        <Collapse.Panel
+                            header={translator.translate(
+                                "exchange.settle_orders"
+                            )}
+                            key="settlementOrders"
+                        >
+                            {settlementOrders}
+                        </Collapse.Panel>
+                    ) : null}
                     <Collapse.Panel
                         header={translator.translate("exchange.my_history")}
                         key="myMarketHistory"
@@ -2944,6 +3026,8 @@ class Exchange extends React.Component {
             <div className="grid-block vertical">
                 {!this.props.marketReady ? <LoadingIndicator /> : null}
                 <ExchangeHeader
+                    hasAnyPriceAlert={this.props.hasAnyPriceAlert}
+                    showPriceAlertModal={this.showPriceAlertModal}
                     account={this.props.currentAccount}
                     quoteAsset={quoteAsset}
                     baseAsset={baseAsset}
@@ -3141,21 +3225,23 @@ class Exchange extends React.Component {
                         account={currentAccount.get("name")}
                         sender={currentAccount.get("id")}
                         asset={
-                            modalType === "bid"
+                            depositModalType === "bid"
                                 ? base.get("id")
                                 : quote.get("id")
                         }
                         modalId={
                             "simple_deposit_modal" +
-                            (modalType === "bid" ? "" : "_ask")
+                            (depositModalType === "bid" ? "" : "_ask")
                         }
                         balance={
-                            modalType === "bid" ? baseBalance : quoteBalance
+                            depositModalType === "bid"
+                                ? baseBalance
+                                : quoteBalance
                         }
                         {...this.props.backedCoins.find(
                             a =>
                                 a.symbol ===
-                                (modalType === "bid"
+                                (depositModalType === "bid"
                                     ? base.get("symbol")
                                     : quote.get("symbol"))
                         )}
@@ -3173,20 +3259,20 @@ class Exchange extends React.Component {
                         account={currentAccount.get("name")}
                         sender={currentAccount.get("id")}
                         asset={
-                            modalType === "bid"
+                            buyModalType === "bid"
                                 ? base.get("id")
                                 : quote.get("id")
                         }
                         modalId={
                             "simple_bridge_modal" +
-                            (modalType === "bid" ? "" : "_ask")
+                            (buyModalType === "bid" ? "" : "_ask")
                         }
                         balances={[
-                            modalType === "bid" ? baseBalance : quoteBalance
+                            buyModalType === "bid" ? baseBalance : quoteBalance
                         ]}
                         bridges={
                             this.props.bridgeCoins.get(
-                                modalType === "bid"
+                                buyModalType === "bid"
                                     ? base.get("symbol")
                                     : quote.get("symbol")
                             ) || null
@@ -3230,6 +3316,17 @@ class Exchange extends React.Component {
                         hasOrders={combinedBids.length > 0}
                     />
                 ) : null}
+
+                <PriceAlert
+                    onSave={this.handlePriceAlertSave}
+                    rules={this.getPriceAlertRules()}
+                    latestPrice={latest && latest.getPrice()}
+                    quoteAsset={this.props.quoteAsset.get("id")}
+                    baseAsset={this.props.baseAsset.get("id")}
+                    visible={this.state.isPriceAlertModalVisible}
+                    showModal={this.showPriceAlertModal}
+                    hideModal={this.hidePriceAlertModal}
+                />
             </div>
         );
     }
