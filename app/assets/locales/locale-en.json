@@ -1028,7 +1028,7 @@
             "open_website": "Open Website"
         },
         "min_deposit_warning_amount": "Minimum Deposit: %(minDeposit)s %(coin)s",
-        "min_deposit_warning_asset": "IMPORTANT: Send only %(coin)s to this deposit address. Sending less than %(minDeposit)s %(coin)s or any other currency to this address may result in the loss of your deposit.",
+        "min_deposit_warning_asset": "IMPORTANT: Send only %(coin)s to this deposit address on the blockchain native to %(coin)s. Sending less than %(minDeposit)s %(coin)s or any other currency to this address may result in the loss of your deposit.",
         "over_limit": "Limit Reached",
         "phase_out_warning": "We recommend using the new {deposit_modal_link} and {withdraw_modal_link} modals as this page will be phased out",
         "please_generate_address": "Please, get new address ",
@@ -1407,24 +1407,24 @@
         "subject": "Subject"
     },
     "notifications": {
-        "account_create_failure": "Failed to create account: %(account_name) - %(error_msg)",
+        "account_create_failure": "Failed to create account: %(account_name)s - %(error_msg)s",
         "account_permissions_update_warning": "Setting your owner permissions like this will render your account permanently unusable. Please make sure you know what you're doing before modifying account authorities!",
-        "account_wallet_create_failure": "Failed to create wallet: %(error_msg)",
+        "account_wallet_create_failure": "Failed to create wallet: %(error_msg)s",
         "asset_issue_failure": "Failed to issue the asset, probably due to an invalid amount being issued",
         "backup_file_save_unsupported": "File saving is not supported",
-        "balance_claim_error": "Error claiming balance: %(error_msg)",
+        "balance_claim_error": "Error claiming balance: %(error_msg)s",
         "exchange_enter_valid_values": "Please enter a valid amount and price",
         "exchange_insufficient_funds_for_fees": "Insufficient funds to pay fees",
-        "exchange_insufficient_funds_to_place_order": "Insufficient funds to place order, you need at least %(amount) $(symbol)",
-        "exchange_unknown_error_place_order": "Unknown error. Failed to place order for %(amount) %(symbol)",
+        "exchange_insufficient_funds_to_place_order": "Insufficient funds to place order, you need at least %(amount)s $(symbol)s",
+        "exchange_unknown_error_place_order": "Unknown error. Failed to place order for %(amount)s %(symbol)s",
         "import_keys_already_imported": "This wallet has already been imported",
-        "import_keys_error": "Account %(account_name) had a private key import error: %(error_msg)",
-        "import_keys_error_unknown": "Key import error: %(error_msg)",
+        "import_keys_error": "Account %(account_name)s had a private key import error: %(error_msg)s",
+        "import_keys_error_unknown": "Key import error: %(error_msg)s",
         "invalid_password": "Invalid Password",
-        "password_change_failure": "Unable to change password: %(error_msg)",
+        "password_change_failure": "Unable to change password: %(error_msg)s",
         "password_change_success": "Password changed",
-        "wallet_unlock_different_block_chain": "This wallet was intended for a different block-chain; expecting %(expectedWalletId), but got %(actualWalletId)",
-        "worker_create_failure": "Failed to create worker: %(error_msg)"
+        "wallet_unlock_different_block_chain": "This wallet was intended for a different block-chain; expecting %(expectedWalletId)s, but got %(actualWalletId)s",
+        "worker_create_failure": "Failed to create worker: %(error_msg)s"
     },
     "openledger": {
         "deposit_amount": "Deposit Amount",
@@ -1735,6 +1735,7 @@
     },
     "tooltip": {
         "borrow": "Borrow %(asset)s from the network. This creates a smart contract that locks your collateral until you either modify the position or a margin call is required.",
+        "borrow_disabled": "%(asset)s is in global settlement. Margin positions can't be created until it is revived. See asset details page for more information",
         "bridge": "Bridges allow deposit of any external assets and instant trade into the desired gateway asset",
         "bridge_TRADE": "BlockTrades is a bridge which supports instant trade of assets. Details and terms can be found on https://blocktrades.us",
         "buy_min": "You will receive at minimum this amount. If there are matching orders with a cheaper price than you specified, you will receive more than this amount.",
